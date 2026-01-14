@@ -1,0 +1,15 @@
+{
+  "originHash" : "80d5668a4b0ef7cc7b9be786730b10084af00e53181672752b7a9a2631205a88",
+  "pins" : [
+    {
+      "identity" : "projectdescription",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/geko-tech/ProjectDescription",
+      "state" : {
+        "branch" : "release/0.15.0",
+        "revision" : "1c819dd60df2e8942f47aa9414a43e07f53b8538"
+      }
+    }
+  ],
+  "version" : 3
+}
