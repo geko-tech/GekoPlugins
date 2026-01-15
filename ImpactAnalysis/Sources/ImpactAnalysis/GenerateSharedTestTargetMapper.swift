@@ -175,7 +175,13 @@ public final class GenerateSharedTestTargetMapper {
                 productName: name,
                 bundleId: "com.geko.\(name)",
                 infoPlist: .extendingDefault(with: [:]),
-                settings: .default,
+                settings: .settings(
+                    base: .init {
+                        [
+                            "OTHER_LDFLAGS": "$(inherited) -ObjC"
+                        ]
+                    }
+                ),
                 filesGroup: .group(name: "Project")
             )
 
