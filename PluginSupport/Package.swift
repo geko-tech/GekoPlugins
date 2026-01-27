@@ -28,7 +28,7 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/geko-tech/ProjectDescription", branch: "release/1.0.0"),
+        .package(url: "https://github.com/geko-tech/project-description", branch: "release/1.0.0"),
         .package(url: "https://github.com/apple/swift-tools-support-core", from: "0.6.1"),
         .package(url: "https://github.com/apple/swift-log", from: "1.5.3"),
         .package(url: "https://github.com/apple/swift-crypto", from: "3.15.1"),
@@ -39,7 +39,7 @@ let package = Package(
         .target(
             name: "PluginSupport",
             dependencies: dependencies + [
-                .product(name: "ProjectDescription", package: "ProjectDescription"),
+                .product(name: "ProjectDescription", package: "project-description"),
                 .product(name: "Crypto", package: "swift-crypto")
             ],
             cSettings: [.define("_GNU_SOURCE", .when(platforms: [.linux]))]
@@ -47,7 +47,7 @@ let package = Package(
         .target(
             name: "PluginSupportStatic",
             dependencies: dependencies + [
-                .product(name: "ProjectDescriptionStatic", package: "ProjectDescription"),
+                .product(name: "ProjectDescriptionStatic", package: "project-description"),
                 .product(name: "Crypto", package: "swift-crypto")
             ],
             cSettings: [.define("_GNU_SOURCE", .when(platforms: [.linux]))]

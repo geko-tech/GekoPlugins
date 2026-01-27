@@ -14,20 +14,20 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/geko-tech/ProjectDescription", branch: "release/1.0.0")
+        .package(url: "https://github.com/geko-tech/project-description", branch: "release/1.0.0")
     ],
     targets: [
         .target(
             name: "WorkspaceMapperExample",
             dependencies: [
-                .product(name: "ProjectDescription", package: "ProjectDescription"),
+                .product(name: "ProjectDescription", package: "project-description"),
                 "ProjectDescriptionHelpers"
             ],
         ),
         .target(
             name: "ProjectDescriptionHelpers",
             dependencies: [
-                .product(name: "ProjectDescription", package: "ProjectDescription"),
+                .product(name: "ProjectDescription", package: "project-description"),
             ],
             path: "ProjectDescriptionHelpers"
         )
