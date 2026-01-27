@@ -531,34 +531,43 @@ extension ImpactAnalysisWorkspaceMapper {
 
     // MARK: - Lockfiles diff calculation
 
-    private func lockfiles() throws -> (original: CocoapodsLockfile, new: CocoapodsLockfile) {
-        let originalLockfile: Data
+    private func lockfiles() throws -> (original: CocoapodsLockfile?, new: CocoapodsLockfile?) {
+        let originalLockfile: Data?
         let originalLockfileContext: ParseYamlContext
-        let newLockfile: Data
+        let newLockfile: Data?
         let newLockfileContext: ParseYamlContext
 
         let lockfilePath = try RelativePath(validating: "Geko/Dependencies/Cocoapods.lock")
         if environment.impactAnalysisDebug {
             let rootDir = fileHandler.currentPath
 
-            originalLockfile = try system.capture(["git", "show", "HEAD:\(lockfilePath.pathString)"]).chomp().data(using: .utf8)!
+            originalLockfile = try? system.capture(["git", "show", "HEAD:\(lockfilePath.pathString)"]).chomp()
+                .data(using: .utf8)
             originalLockfileContext = .git(path: lockfilePath, ref: "HEAD")
 
             let newLockfilePath = rootDir.appending(lockfilePath)
-            newLockfile = try fileHandler.readFile(newLockfilePath)
+            newLockfile = try? fileHandler.readFile(newLockfilePath)
             newLockfileContext = .file(path: newLockfilePath)
         } else {
-            originalLockfile = try system.capture(["git", "show", "\(targetRef):\(lockfilePath.pathString)"]).chomp()
-                .data(using: .utf8)!
+            originalLockfile = try? system.capture(["git", "show", "\(targetRef):\(lockfilePath.pathString)"]).chomp()
+                .data(using: .utf8)
             originalLockfileContext = .git(path: lockfilePath, ref: "HEAD")
 
-            newLockfile = try system.capture(["git", "show", "\(sourceRef):\(lockfilePath.pathString)"]).chomp()
-                .data(using: .utf8)!
+            newLockfile = try? system.capture(["git", "show", "\(sourceRef):\(lockfilePath.pathString)"]).chomp()
+                .data(using: .utf8)
             newLockfileContext = .git(path: lockfilePath, ref: "HEAD")
         }
 
-        let originalLockfileYml = try CocoapodsLockfile.from(data: originalLockfile, context: originalLockfileContext)!
-        let newLockfileYml = try CocoapodsLockfile.from(data: newLockfile, context: newLockfileContext)!
+        var originalLockfileYml: CocoapodsLockfile?
+        var newLockfileYml: CocoapodsLockfile?
+
+        if let originalLockfile {
+            originalLockfileYml = try CocoapodsLockfile.from(data: originalLockfile, context: originalLockfileContext)
+        }
+
+        if let newLockfile {
+            newLockfileYml = try CocoapodsLockfile.from(data: newLockfile, context: newLockfileContext)
+        }
 
         return (originalLockfileYml, newLockfileYml)
     }
@@ -566,9 +575,16 @@ extension ImpactAnalysisWorkspaceMapper {
     private func lockfileChanges(
         workspace: inout WorkspaceWithProjects,
         externalDependenciesGraph: DependenciesGraph,
-        originalLockfile: CocoapodsLockfile,
-        newLockfile: CocoapodsLockfile
+        originalLockfile: CocoapodsLockfile?,
+        newLockfile: CocoapodsLockfile?
     ) throws -> Set<ImpactGraphDependency> {
+        guard
+            let originalLockfile = originalLockfile,
+            let newLockfile = newLockfile
+        else {
+            return []
+        }
+
         var changedDependencies = Set<String>()
 
         func compare(_ origLockfile: CocoapodsLockfile, _ newLockfile: CocoapodsLockfile) {

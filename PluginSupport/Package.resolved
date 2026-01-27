@@ -10,12 +10,12 @@
       }
     },
     {
-      "identity" : "projectdescription",
+      "identity" : "project-description",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/geko-tech/ProjectDescription",
+      "location" : "https://github.com/geko-tech/project-description",
       "state" : {
         "branch" : "release/1.0.0",
-        "revision" : "9305e98d90d536456bcc9e0eb306de8a51518bd8"
+        "revision" : "163340426179ebd12ef856cd762c7868451bef08"
       }
     },
     {
@@ -41,8 +41,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-log",
       "state" : {
-        "revision" : "bc386b95f2a16ccd0150a8235e7c69eab2b866ca",
-        "version" : "1.8.0"
+        "revision" : "2778fd4e5a12a8aaa30a3ee8285f4ce54c5f3181",
+        "version" : "1.9.1"
       }
     },
     {

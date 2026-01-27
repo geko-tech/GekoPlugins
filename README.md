@@ -2,4 +2,6 @@
 
 This repository contains official Geko plugins and examples of Geko plugins.
 
-TODO: add links to documentation
+# Documentation
+
+Documentation is available at [geko-tech.github.io/geko/guides/features/plugins/](https://geko-tech.github.io/geko/guides/features/plugins/)
