@@ -578,11 +578,16 @@ extension ImpactAnalysisWorkspaceMapper {
         originalLockfile: CocoapodsLockfile?,
         newLockfile: CocoapodsLockfile?
     ) throws -> Set<ImpactGraphDependency> {
-        guard
-            let originalLockfile = originalLockfile,
-            let newLockfile = newLockfile
-        else {
-            return []
+        guard let newLockfile else { return [] }
+
+        guard let originalLockfile else {
+            var changedDependencies = Set<String>()
+
+            for (_, newSourceData) in newLockfile.podsBySource {
+                changedDependencies.formUnion(newSourceData.pods.keys)
+            }
+
+            return mapImpactDependencies(from: changedDependencies, externalDependenciesGraph: externalDependenciesGraph)
         }
 
         var changedDependencies = Set<String>()
@@ -613,6 +618,13 @@ extension ImpactAnalysisWorkspaceMapper {
         compare(originalLockfile, newLockfile)
         compare(newLockfile, originalLockfile)
 
+        return mapImpactDependencies(from: changedDependencies, externalDependenciesGraph: externalDependenciesGraph)
+    }
+
+    private func mapImpactDependencies(
+        from changedDependencies: Set<String>,
+        externalDependenciesGraph: DependenciesGraph
+    ) -> Set<ImpactGraphDependency> {
         var result = Set<ImpactGraphDependency>()
 
         for dependency in changedDependencies {
