@@ -1,0 +1,45 @@
+name: Test
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  get-changed-plugins:
+    runs-on: ubuntu-latest
+    outputs:
+      plugins: ${{ steps.set-matrix.outputs.plugins_json }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Get changed plugins
+        id: set-matrix
+        env:
+          DIFF_BASE: ${{ github.base_ref }}
+        run: |
+          git fetch origin $DIFF_BASE
+          chmod +x ./scripts/helpers/changed_plugins.bash
+          changed=$(./scripts/helpers/changed_plugins.bash)
+          echo "Changed plugins: $changed"
+          echo "plugins_json=$changed" >> $GITHUB_OUTPUT
+
+  test-plugins:
+    needs: get-changed-plugins
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        plugin: ${{ fromJSON(needs.get-changed-plugins.outputs.plugins) }}
+        os: [macos-26, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v2
+      - name: Run tests for plugin
+        run: |
+          echo "Testing plugin ${{ matrix.plugin }}"
+          geko plugin test --path ${{ matrix.plugin }}

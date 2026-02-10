@@ -18,5 +18,11 @@ let package = Package(
             name: "ExampleTarget",
             dependencies: []
         ),
+        .testTarget(
+            name: "ExecutablePluginExampleTests",
+            dependencies: [
+                "ExampleTarget"
+            ]
+        )
     ]
 )

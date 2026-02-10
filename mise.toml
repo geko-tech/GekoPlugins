@@ -1,0 +1,2 @@
+[tools]
+"github:geko-tech/geko" = { version = "1.0.0", version_prefix = "Geko@" }
