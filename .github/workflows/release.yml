@@ -1,0 +1,174 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  get-plugins:
+    runs-on: ubuntu-latest
+    outputs:
+      plugins: ${{ steps.set-matrix.outputs.plugins_json }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Get changed plugins
+        id: set-matrix
+        env:
+          DIFF_BASE: ${{ github.base_ref }}
+        run: |
+          plugins=$(jq -c '[.plugins[].name]' plugins.json)
+          echo "Changed plugins: $plugins"
+          echo "plugins_json=$plugins" >> $GITHUB_OUTPUT
+
+  create-plugin-release:
+    needs: get-plugins
+    runs-on: ubuntu-latest
+    outputs:
+      plugin_name: ${{ matrix.plugin }}
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    permissions:
+      contents: write
+      pull-requests: write
+    strategy:
+      matrix:
+        plugin: ${{ fromJSON(needs.get-plugins.outputs.plugins) }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Fetch last tag
+        run: |
+          git fetch --tags
+
+          LATEST_TAG=$(git describe --abbrev=0 --tags --match "${{ matrix.plugin }}/*" 2>/dev/null || true)
+          if [ -z "$LATEST_TAG" ]; then
+            LATEST_TAG=$(git rev-list --max-parents=0 HEAD)
+            LATEST_VERSION="0.0.0"
+            echo "Latest tag not found. The first commit of the repository will be used to search for plugin changelogs: $LATEST_TAG"
+            
+            echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
+            echo "LATEST_VERSION=$LATEST_VERSION" >> $GITHUB_ENV
+            exit 0
+          fi
+          echo $LATEST_TAG
+
+          LATEST_VERSION=$(echo "$LATEST_TAG" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          if [ -n "$LATEST_VERSION" ]; then
+            LATEST_VERSION="${LATEST_VERSION}"
+          else
+            echo "Failed to extract version from tag: $LATEST_TAG" >&2; exit 1;
+          fi
+
+          echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
+          echo "LATEST_VERSION=$LATEST_VERSION" >> $GITHUB_ENV
+      - name: Calculate new version
+        id: new-version
+        if: env.LATEST_TAG != ''
+        run: |
+          LATEST_TAG="${{ env.LATEST_TAG }}"
+          LATEST_VERSION="${{ env.LATEST_VERSION }}"
+
+          set +e
+          ALL_MESSAGES=$(git log "$LATEST_TAG"..HEAD --format=%B -- ${{ matrix.plugin }} | grep -E "\[(patch|minor|major)\] (feat|fix|refactor): .*")
+          set -e
+
+          if [ -z "$ALL_MESSAGES" ]; then
+            echo "ALL_MESSAGES is empty. The plugin has not had any changes." >&2;
+            exit 0
+          fi
+
+          echo "ALL_MESSAGES=$ALL_MESSAGES"
+
+          chmod +x ./scripts/helpers/incr_semver.bash
+
+          new_patch=""
+          if [[ "$ALL_MESSAGES" == *"[major]"* ]]; then
+          new_patch=$(./scripts/helpers/incr_semver.bash "$LATEST_VERSION" major)
+          echo "NEW_BUMP_TYPE=major" >> $GITHUB_ENV
+          elif [[ "$ALL_MESSAGES" == *"[minor]"* ]]; then
+          new_patch=$(./scripts/helpers/incr_semver.bash "$LATEST_VERSION" minor)
+          echo "NEW_BUMP_TYPE=minor" >> $GITHUB_ENV
+          else
+          new_patch=$(./scripts/helpers/incr_semver.bash "$LATEST_VERSION" patch)
+          echo "NEW_BUMP_TYPE=patch" >> $GITHUB_ENV
+          fi
+
+          echo "NEW_VERSION=$new_patch" >> $GITHUB_ENV
+
+          echo "CHANGELOG<<EOF" >> $GITHUB_ENV
+          echo "$ALL_MESSAGES" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Create Release
+        if: env.NEW_VERSION != ''
+        id: create_release
+        uses: actions/create-release@v1.1.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ matrix.plugin }}/${{ env.NEW_VERSION }}
+          release_name: ${{ matrix.plugin }}/${{ env.NEW_VERSION }}
+          body: ${{ env.CHANGELOG }}
+          draft: true
+          prerelease: false
+      - name: Write upload_url
+        env:
+          plugin_upload_url: ${{ steps.create_release.outputs.upload_url }}
+        run: echo $plugin_upload_url > plugin_upload_url
+      - name: Produce Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.plugin }}
+          path: plugin_upload_url
+
+  archive-plugin:
+    needs: 
+      - get-plugins
+      - create-plugin-release
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+      pull-requests: write
+    strategy:
+      matrix:
+        os: [macos-26, ubuntu-latest]
+        plugin: ${{ fromJSON(needs.get-plugins.outputs.plugins) }}
+    steps:
+      - name: Retrieve Upload Url
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.plugin }}
+      - name: Get plugin_upload_url
+        run: |
+          echo $(cat plugin_upload_url)
+          echo "PLUGIN_UPLOAD_URL=$(cat plugin_upload_url)" >> $GITHUB_ENV
+      - uses: actions/checkout@v6
+        if: env.PLUGIN_UPLOAD_URL != ''
+      - uses: jdx/mise-action@v2
+        if: env.PLUGIN_UPLOAD_URL != ''
+      - name: Archive plugin ${{ matrix.plugin }}
+        if: env.PLUGIN_UPLOAD_URL != ''
+        run: |
+          PLUGIN_NAME=${{ matrix.plugin }}
+          geko plugin archive --path $PLUGIN_NAME
+          if [[ ${{ matrix.os }} == "ubuntu-latest" ]]; then
+            ARCH="x86_64"
+            find "$PLUGIN_NAME" -type f -iname "$PLUGIN_NAME.linux.$ARCH.geko-plugin.zip" -exec cp -v {} "$ARCH.linux-plugin.zip" \;
+            echo "ARCHIVE_PATH=$ARCH.linux-plugin.zip" >> $GITHUB_ENV
+            echo "ASSET_NAME=$PLUGIN_NAME.linux.$ARCH.geko-plugin.zip" >> $GITHUB_ENV
+          else
+            echo "ARCHIVE_PATH=$PLUGIN_NAME/$PLUGIN_NAME.macos.geko-plugin.zip" >> $GITHUB_ENV
+            echo "ASSET_NAME=$PLUGIN_NAME.macos.geko-plugin.zip" >> $GITHUB_ENV
+          fi
+      - name: Upload release binary
+        if: env.PLUGIN_UPLOAD_URL != ''
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ env.PLUGIN_UPLOAD_URL }}
+          asset_path: ${{ env.ARCHIVE_PATH }}
+          asset_name: ${{ env.ASSET_NAME }}
+          asset_content_type: application/json

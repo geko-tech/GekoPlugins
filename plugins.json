@@ -1,0 +1,7 @@
+{
+    "plugins": [
+        { "name": "ExecutablePluginExample" },
+        { "name": "WorkspaceMapperExample" },
+        { "name": "ImpactAnalysis"}
+    ]
+}

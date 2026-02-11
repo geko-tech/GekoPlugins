@@ -30,6 +30,12 @@ let package = Package(
                 .product(name: "ProjectDescription", package: "project-description"),
             ],
             path: "ProjectDescriptionHelpers"
+        ),
+        .testTarget(
+            name: "WorkspaceMapperExampleTests",
+            dependencies: [
+                "WorkspaceMapperExample"
+            ]
         )
     ]
 )

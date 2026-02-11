@@ -1,7 +1,7 @@
 import ProjectDescription
 
 let plugin = Plugin(
-    name: "GekoPlugin",
+    name: "ExecutablePluginExample",
     executables: [
         ExecutablePlugin(name: "ExampleGekoExecutable")
     ]
