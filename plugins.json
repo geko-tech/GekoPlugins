@@ -2,6 +2,8 @@
     "plugins": [
         { "name": "ExecutablePluginExample" },
         { "name": "WorkspaceMapperExample" },
+        { "name": "ProjectDescriptionHelpersPluginExample" },
+        { "name": "TemplatesPluginExample" },
         { "name": "ImpactAnalysis"}
     ]
 }
