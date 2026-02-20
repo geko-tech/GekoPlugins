@@ -28,7 +28,7 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/geko-tech/project-description", branch: "release/1.0.0"),
+        .package(url: "https://github.com/geko-tech/project-description", branch: "release/1.1.0"),
         .package(url: "https://github.com/apple/swift-tools-support-core", from: "0.6.1"),
         .package(url: "https://github.com/apple/swift-log", from: "1.5.3"),
         .package(url: "https://github.com/apple/swift-crypto", from: "3.15.1"),
